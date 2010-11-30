@@ -1,6 +1,5 @@
  -- By Foof & Hydra at Tukui.org
-
-if not TukuiCubeRight then return end
+ -- modified by Gorlasch
 
 -- Config variables
 font = TukuiCF.media.font            -- Font to be used for button text
@@ -9,6 +8,7 @@ buttonwidth = TukuiDB.Scale(100)     -- Width of menu buttons
 buttonheight = TukuiDB.Scale(20)     -- Height of menu buttons
 classcolor = true                    -- Class color buttons
 hovercolor = {0,.8,1,1}              -- Color of buttons on mouse-over (if classcolor is false)
+defaultIsToggleOnly = true           -- Sets the default value for the addon menu (true = toggle-only, false = enhanced version)
 
 local addons = {
 	["Recount"] = function()
@@ -59,15 +59,19 @@ TukuiDB.CreatePanel(AddonBG, buttonwidth + TukuiDB.Scale(6), 1, "TOP", MenuBG, "
 AddonBG:SetFrameLevel(0)
 AddonBG:Hide()
 
--- Integrate the menu into default Tukui
-local ToggleCube = CreateFrame("Frame", "TukuiToggleCube", UIParent)
-TukuiDB.CreatePanel(ToggleCube, TukuiCubeRight:GetWidth(), TukuiCubeRight:GetHeight(), "CENTER", TukuiCubeRight, "CENTER", 0, 0)
-ToggleCube:SetFrameLevel(TukuiCubeRight:GetFrameLevel() + 1)
-ToggleCube:EnableMouse(true)
-ToggleCube:SetScript("OnMouseDown", function()
+function ToggleMenu_Toggle()
 	ToggleFrame(MenuBackground)
 	if AddOnBackground:IsShown() then AddOnBackground:Hide() end
-end)
+end
+
+-- Integrate the menu into Tukui
+if TukuiCubeRight then
+	local ToggleCube = CreateFrame("Frame", "TukuiToggleCube", UIParent)
+	TukuiDB.CreatePanel(ToggleCube, TukuiCubeRight:GetWidth(), TukuiCubeRight:GetHeight(), "CENTER", TukuiCubeRight, "CENTER", 0, 0)
+	ToggleCube:SetFrameLevel(TukuiCubeRight:GetFrameLevel() + 1)
+	ToggleCube:EnableMouse(true)
+	ToggleCube:SetScript("OnMouseDown", function() ToggleMenu_Toggle() end)
+end
 
 -- color sh*t
 if classcolor == true then
@@ -123,25 +127,216 @@ Text:SetPoint("CENTER", returnbutton, 0, 0)
 Text:SetText("Return")
 returnbutton:SetScript("OnMouseUp", function() ToggleFrame(AddOnBackground); ToggleFrame(MenuBackground); end)
 
-addonmenu = CreateFrame("Button", "AddonMenu", AddonBG)	-- AddOn page buttons
-addonmenu[1] = returnbutton
+-- new stuff
 
-for key, value in pairs(addons) do
-	if IsAddOnLoaded(key) then
-		local menuitem = CreateFrame("Button", "AddonMenu"..(#addonmenu + 1), AddonBG)
-		TukuiDB.CreatePanel(menuitem, buttonwidth, buttonheight, "TOP", addonmenu[#addonmenu], "BOTTOM", 0, TukuiDB.Scale(-3))
-		menuitem:EnableMouse(true)
-		menuitem:HookScript("OnEnter", function(self) self:SetBackdropBorderColor(unpack(hovercolor)) end)
-		menuitem:HookScript("OnLeave", function(self) self:SetBackdropBorderColor(unpack(TukuiCF.media.bordercolor)) end)
-		menuitem:RegisterForClicks("AnyUp")
-		menuitem:SetFrameLevel(1)
-		Text = menuitem:CreateFontString(nil, "LOW")
-		Text:SetFont(font, fontsize)
-		Text:SetPoint("CENTER", menuitem, 0, 0)
-		Text:SetText(key)
-		menuitem:SetScript("OnMouseUp", value)
-		addonmenu[#addonmenu + 1] = menuitem
+local expandbutton = CreateFrame("Button", "AddonMenuExpandButton", AddonBG)
+TukuiDB.CreatePanel(expandbutton, buttonwidth, buttonheight/2, "BOTTOM", AddonBG, "BOTTOM", 0, TukuiDB.Scale(3))
+expandbutton:EnableMouse(true)
+expandbutton:HookScript("OnEnter", function(self) self:SetBackdropBorderColor(unpack(hovercolor)) end)
+expandbutton:HookScript("OnLeave", function(self) self:SetBackdropBorderColor(unpack(TukuiCF.media.bordercolor)) end)
+expandbutton:RegisterForClicks("AnyUp")
+expandbutton:SetFrameLevel(1)
+Text = expandbutton:CreateFontString(nil, "LOW")
+Text:SetFont(font, fontsize)
+Text:SetPoint("CENTER", expandbutton, 0, 0)
+Text:SetText("v")
+expandbutton.txt = Text
+
+local collapsedAddons = {
+	["DBM"]      = "DBM-Core",
+	["Tukui"]    = "Tukui",
+}
+
+local addonInfo
+local lastMainAddon = "XYZNonExistantDummyAddon"
+local lastMainAddonID = 0
+if not addonInfo then
+	addonInfo = {{}}
+	for i = 1,GetNumAddOns() do
+		name,title,_, enabled, _, _, _ = GetAddOnInfo(i)
+		if(name and enabled) then
+			addonInfo[i] = {["enabled"] = true,  ["is_main"] = false, collapsed = true, ["parent"] = i}
+		else
+			addonInfo[i] = {["enabled"] = false, ["is_main"] = false, collapsed = true, ["parent"] = i}
+		end
+		-- check special addon list first
+		local addonFound = false
+		for key, value in pairs(collapsedAddons) do
+			if strsub(name, 0, strlen(key)) == key then
+				addonFound = true
+				if name == value then
+					lastMainAddon = name
+					lastMainAddonID = i
+					addonInfo[i].is_main = true
+				else
+					addonInfo[i].parent = lastMainAddonID
+					for j = 1,GetNumAddOns() do
+						name_j, _, _, _, _, _, _ = GetAddOnInfo(j)
+						if name_j == value then
+							addonInfo[i].parent = j
+						end
+					end
+				end
+			end
+		end
+		-- collapse addons with common prefix
+		if not addonFound then
+			if strsub(name, 0, strlen(lastMainAddon)) == lastMainAddon then
+				addonInfo[lastMainAddonID].is_main = true
+				addonInfo[i].parent = lastMainAddonID
+			else
+				lastMainAddon = name
+				lastMainAddonID = i
+			end
+		end
 	end
 end
 
-AddonBG:SetHeight((#addonmenu * buttonheight) + ((#addonmenu + 1) * 3))
+local addonmenuitems = {};
+
+local function addonEnableToggle(self, i)
+	local was_enabled = addonInfo[i].enabled
+	for j = 1,GetNumAddOns() do
+		if ((addonInfo[j].parent == i and addonInfo[i].collapsed) or (i==j and not addonInfo[addonInfo[i].parent].collapsed)) then
+			if was_enabled then
+				DisableAddOn(j)
+				addonmenuitems[j]:SetBackdropColor(unpack(TukuiCF.media.bordercolor))
+			else
+				EnableAddOn(j)
+				addonmenuitems[j]:SetBackdropColor(unpack(TukuiCF.media.backdropcolor))
+			end
+			addonInfo[j].enabled = not was_enabled
+		end
+	end
+end
+
+local function addonFrameToggle(self, i)
+	local name, _,_, _, _, _, _ = GetAddOnInfo(i)
+	if addons[name] then
+		if IsAddOnLoaded(i) then
+			addons[name]()
+		end
+	end
+end
+
+local addonToggleOnly = defaultIsToggleOnly
+
+local function refreshAddOnMenu()
+	local lastMenuEntryID = 0
+	local menusize = 1
+	for i = 1,GetNumAddOns() do
+		local name, _,_, _, _, _, _ = GetAddOnInfo(i)
+		addonmenuitems[i]:Hide()		
+		if (addonInfo[i].is_main or (addonInfo[i].parent == i) or not addonInfo[addonInfo[i].parent].collapsed) then
+			if (not addonToggleOnly or (addons[name] and IsAddOnLoaded(i))) then
+				addonmenuitems[i]:ClearAllPoints()
+				if (menusize == 1) then
+					addonmenuitems[i]:SetPoint( "TOP", returnbutton, "BOTTOM", 0, TukuiDB.Scale(-3))
+				else
+					addonmenuitems[i]:SetPoint( "TOP", addonmenuitems[lastMenuEntryID], "BOTTOM", 0, TukuiDB.Scale(-3))
+				end
+				addonmenuitems[i]:Show()
+				lastMenuEntryID = i
+				menusize = menusize + 1
+			end
+		end
+		if addonInfo[i].is_main then
+			if addonToggleOnly then
+				addonmenuitems[i].expandbtn:Hide()
+			else
+				addonmenuitems[i].expandbtn:Show()
+			end
+		end
+	end
+	AddonBG:SetHeight(((menusize) * buttonheight) + buttonheight/2 + ((menusize + 2) * 3))
+end
+
+expandbutton:SetScript("OnMouseUp", function(self) 
+	addonToggleOnly = not addonToggleOnly
+	if addonToggleOnly then
+		self.txt:SetText("v")
+		self.txt:SetPoint("CENTER", self, 0, 0)
+	else
+		self.txt:SetText("^")
+		self.txt:SetPoint("CENTER", self, 0, TukuiDB.Scale(-2))
+	end
+	refreshAddOnMenu()
+end)
+
+for i = 1,GetNumAddOns() do
+	local name, _,_, _, _, _, _ = GetAddOnInfo(i)
+	addonmenuitems[i] = CreateFrame("Button", "AddonMenu"..i, AddonBG)
+	TukuiDB.CreatePanel(addonmenuitems[i], buttonwidth, buttonheight, "TOP", returnbutton, "BOTTOM", 0, TukuiDB.Scale(-3))
+	addonmenuitems[i]:EnableMouse(true)
+	addonmenuitems[i]:RegisterForClicks("AnyUp")
+	addonmenuitems[i]:SetFrameLevel(1)
+	addonmenuitems[i]:SetScript("OnMouseUp", function(self, btn)
+		if btn == "RightButton" then
+			addonEnableToggle(self, i)
+		else
+			addonFrameToggle(self, i)
+		end				
+	end)
+	addonmenuitems[i]:HookScript("OnEnter", function(self) self:SetBackdropBorderColor(unpack(hovercolor)) 
+		GameTooltip:SetOwner(self, 'ANCHOR_NONE', 0, 0)
+		GameTooltip:AddLine("Addon "..name)
+		GameTooltip:AddLine("Rightclick to enable or disable (needs UI reload)")			
+		if addons[name] then
+			if IsAddOnLoaded(i) then
+				GameTooltip:AddLine("Leftclick to toggle addon window")
+			end
+		end
+		GameTooltip:Show()
+	end)
+	addonmenuitems[i]:HookScript("OnLeave", function(self) self:SetBackdropBorderColor(unpack(TukuiCF.media.bordercolor))
+		GameTooltip:Hide()
+	end)
+	if addonInfo[i].enabled then
+		addonmenuitems[i]:SetBackdropColor(unpack(TukuiCF.media.backdropcolor))
+	else
+		addonmenuitems[i]:SetBackdropColor(unpack(TukuiCF.media.bordercolor))
+	end
+	Text = addonmenuitems[i]:CreateFontString(nil, "LOW")
+	Text:SetFont(font, fontsize)
+	Text:SetPoint("CENTER", addonmenuitems[i], 0, 0)
+	Text:SetText(GetAddOnInfo(i))
+	if addonInfo[i].is_main then
+		local expandAddonButton = CreateFrame("Button", "AddonMenuExpand"..i, addonmenuitems[i])
+		TukuiDB.CreatePanel(expandAddonButton, buttonheight-TukuiDB.Scale(6), buttonheight-TukuiDB.Scale(6), "TOPLEFT", addonmenuitems[i], "TOPLEFT", TukuiDB.Scale(3), TukuiDB.Scale(-3))
+		expandAddonButton:SetFrameLevel(2)
+		expandAddonButton:EnableMouse(true)
+		expandAddonButton:HookScript("OnEnter", function(self)
+			self:SetBackdropBorderColor(unpack(hovercolor))
+			GameTooltip:SetOwner(self, 'ANCHOR_NONE', 0, 0)
+			if addonInfo[i].collapsed then
+				GameTooltip:AddLine("Expand "..name.." addons")
+			else
+				GameTooltip:AddLine("Collapse "..name.." addons")
+			end
+			GameTooltip:Show()
+		end)
+		expandAddonButton:HookScript("OnLeave", function(self)
+			self:SetBackdropBorderColor(unpack(TukuiCF.media.bordercolor))
+			GameTooltip:Hide()
+			end)
+		expandAddonButton:RegisterForClicks("AnyUp")
+		Text = expandAddonButton:CreateFontString(nil, "LOW")
+		Text:SetFont(font, fontsize)
+		Text:SetPoint("CENTER", expandAddonButton, 0, 0)
+		Text:SetText("+")
+		expandAddonButton.txt = Text
+		expandAddonButton:SetScript("OnMouseUp", function(self)
+			addonInfo[i].collapsed = not addonInfo[i].collapsed
+			if addonInfo[i].collapsed then
+				self.txt:SetText("+")
+			else
+				self.txt:SetText("-")
+			end
+			refreshAddOnMenu()
+		end)
+		addonmenuitems[i].expandbtn = expandAddonButton
+	end
+	addonmenuitems[i]:Hide()
+end
+
+refreshAddOnMenu()

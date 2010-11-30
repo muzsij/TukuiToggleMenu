@@ -48,6 +48,14 @@ local addons = {
 		ToggleFrame(PandaPanel)
 	end,
 
+	["PallyPower"] = function()
+		ToggleFrame(PallyPowerFrame)
+	end,
+
+	["ACP"] = function()
+		ToggleFrame(ACP_AddonList)
+	end,
+
 	["ScrollMaster"] = function()
 		LibStub("AceAddon-3.0"):GetAddon("ScrollMaster").GUI:OpenFrame(1)
 	end,
@@ -328,7 +336,7 @@ for i = 1,GetNumAddOns() do
 	Text = addonmenuitems[i]:CreateFontString(nil, "LOW")
 	Text:SetFont(TukuiCF.togglemenu.font, TukuiCF.togglemenu.fontsize)
 	Text:SetPoint("CENTER", addonmenuitems[i], 0, 0)
-	Text:SetText(GetAddOnInfo(i))
+	Text:SetText(select(2,GetAddOnInfo(i)))
 	if addonInfo[i].is_main then
 		local expandAddonButton = CreateFrame("Button", "AddonMenuExpand"..i, addonmenuitems[i])
 		TukuiDB.CreatePanel(expandAddonButton, buttonheight-TukuiDB.Scale(6), buttonheight-TukuiDB.Scale(6), "TOPLEFT", addonmenuitems[i], "TOPLEFT", TukuiDB.Scale(3), TukuiDB.Scale(-3))

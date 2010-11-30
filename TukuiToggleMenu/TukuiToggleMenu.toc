@@ -6,4 +6,5 @@
 ## RequiredDeps: Tukui
 ## OptionalDeps: Tukui_ConfigUI, DXE
 
+config.lua
 core.lua

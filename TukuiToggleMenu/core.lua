@@ -1,14 +1,10 @@
- -- By Foof & Hydra at Tukui.org
- -- modified by Gorlasch
+-- By Foof & Hydra at Tukui.org
+-- modified by Gorlasch
+-- modified by HyPeRnIcS
 
--- Config variables
-font = TukuiCF.media.font            -- Font to be used for button text
-fontsize = 12                        -- Size of font for button text
-buttonwidth = TukuiDB.Scale(100)     -- Width of menu buttons
-buttonheight = TukuiDB.Scale(20)     -- Height of menu buttons
-classcolor = true                    -- Class color buttons
-hovercolor = {0,.8,1,1}              -- Color of buttons on mouse-over (if classcolor is false)
-defaultIsToggleOnly = true           -- Sets the default value for the addon menu (true = toggle-only, false = enhanced version)
+local buttonwidth = TukuiDB.Scale(TukuiCF.togglemenu.buttonwidth)
+local buttonheight = TukuiDB.Scale(TukuiCF.togglemenu.buttonheight)
+local defaultframelevel = 0
 
 local addons = {
 	["Recount"] = function()
@@ -47,25 +43,39 @@ local addons = {
 			TukuiConfigUI:Hide()
 		end
 	end,
+
+	["Panda"] = function()
+		ToggleFrame(PandaPanel)
+	end,
+
+	["ScrollMaster"] = function()
+		LibStub("AceAddon-3.0"):GetAddon("ScrollMaster").GUI:OpenFrame(1)
+	end,
 }
 
-local MenuBG = CreateFrame("Frame", "MenuBackground", UIParent)
-TukuiDB.CreatePanel(MenuBG, buttonwidth + TukuiDB.Scale(6), buttonheight * 5 + TukuiDB.Scale(18), "TOP", UIParent, "TOP", 0, TukuiDB.Scale(-15))
-MenuBG:SetFrameLevel(0)
+local MenuBG = CreateFrame("Frame", "TTMenuBackground", UIParent)
+if TukuiCF.togglemenu.positionnexttoMinimap == true then
+	TukuiDB.CreatePanel(MenuBG, buttonwidth + TukuiDB.Scale(6), buttonheight * 5 + TukuiDB.Scale(18), "TOPRIGHT", TukuiMinimap, "TOPLEFT", TukuiDB.Scale(-3), 0)
+else
+	TukuiDB.CreatePanel(MenuBG, buttonwidth + TukuiDB.Scale(6), buttonheight * 5 + TukuiDB.Scale(18), "TOP", UIParent, "TOP", 0, TukuiDB.Scale(-15))
+end
+MenuBG:SetFrameLevel(defaultframelevel+0)
+MenuBG:SetFrameStrata("HIGH")
 MenuBG:Hide()
  
-local AddonBG = CreateFrame("Frame", "AddOnBackground", UIParent)
+local AddonBG = CreateFrame("Frame", "TTMenuAddOnBackground", UIParent)
 TukuiDB.CreatePanel(AddonBG, buttonwidth + TukuiDB.Scale(6), 1, "TOP", MenuBG, "TOP", 0, 0)
-AddonBG:SetFrameLevel(0)
+AddonBG:SetFrameLevel(defaultframelevel+0)
+AddonBG:SetFrameStrata("HIGH")
 AddonBG:Hide()
 
 function ToggleMenu_Toggle()
-	ToggleFrame(MenuBackground)
-	if AddOnBackground:IsShown() then AddOnBackground:Hide() end
+	ToggleFrame(TTMenuBackground)
+	if TTMenuAddOnBackground:IsShown() then TTMenuAddOnBackground:Hide() end
 end
 
--- Integrate the menu into Tukui
-if TukuiCubeRight then
+-- Integrate the menu into TukuiRightCube
+if TukuiCubeRight and TukuiCF.togglemenu.useTukuiCubeRight == true then
 	local ToggleCube = CreateFrame("Frame", "TukuiToggleCube", UIParent)
 	TukuiDB.CreatePanel(ToggleCube, TukuiCubeRight:GetWidth(), TukuiCubeRight:GetHeight(), "CENTER", TukuiCubeRight, "CENTER", 0, 0)
 	ToggleCube:SetFrameLevel(TukuiCubeRight:GetFrameLevel() + 1)
@@ -73,16 +83,32 @@ if TukuiCubeRight then
 	ToggleCube:SetScript("OnMouseDown", function() ToggleMenu_Toggle() end)
 end
 
+-- Integrate the menu into the panel
+if TukuiCF.togglemenu.useDataText and TukuiCF.togglemenu.useDataText > 0 then
+	local DataText = CreateFrame("Frame")
+	DataText:EnableMouse(true)
+	DataText:SetFrameStrata("BACKGROUND")
+	DataText:SetFrameLevel(3)
+	local Text  = TukuiInfoLeft:CreateFontString(nil, "OVERLAY")
+	Text:SetFont(TukuiCF.media.font, TukuiCF["datatext"].fontsize)
+	TukuiDB.PP(TukuiCF.togglemenu.useDataText, Text)
+	Text:SetText(TukuiCF.togglemenu.DataTextTitle)
+	DataText:SetAllPoints(Text)
+	DataText:SetScript("OnMouseDown", function() ToggleMenu_Toggle() end)
+end
+
 -- color sh*t
-if classcolor == true then
+if TukuiCF.togglemenu.classcolor == true then
 	local classcolor = RAID_CLASS_COLORS[TukuiDB.myclass]
 	hovercolor = {classcolor.r,classcolor.g,classcolor.b,1}
 end
 
-menu = CreateFrame("Button", "Menu", MenuBG) -- Main buttons
+local menu = CreateFrame("Button", "Menu", MenuBG) -- Main buttons
 for i = 1, 5 do
 	menu[i] = CreateFrame("Button", "Menu"..i, MenuBG)
 	TukuiDB.CreatePanel(menu[i], buttonwidth, buttonheight, "BOTTOM", MenuBG, "BOTTOM", 0, TukuiDB.Scale(3))
+	menu[i]:SetFrameLevel(defaultframelevel+1)
+	menu[i]:SetFrameStrata("HIGH")
 	if i == 1 then
 		menu[i]:SetPoint("BOTTOM", MenuBG, "BOTTOM", 0, TukuiDB.Scale(3))
 	else
@@ -93,7 +119,7 @@ for i = 1, 5 do
 	menu[i]:HookScript("OnLeave", function(self) self:SetBackdropBorderColor(unpack(TukuiCF.media.bordercolor)) end)
 	menu[i]:RegisterForClicks("AnyUp")
 	Text = menu[i]:CreateFontString(nil, "LOW")
-	Text:SetFont(font, fontsize)
+	Text:SetFont(TukuiCF.togglemenu.font, TukuiCF.togglemenu.fontsize)
 	Text:SetPoint("CENTER", menu[i], 0, 0)
  
 	if i == 1 then -- KeyRing
@@ -107,10 +133,10 @@ for i = 1, 5 do
 		menu[i]:SetScript("OnMouseUp", function() ToggleCalendar() end)
 	elseif i == 4 then -- AddOns
 		Text:SetText("AddOns")
-		menu[i]:SetScript("OnMouseUp", function() ToggleFrame(AddOnBackground); ToggleFrame(MenuBackground); end)
+		menu[i]:SetScript("OnMouseUp", function() ToggleFrame(TTMenuAddOnBackground); ToggleFrame(TTMenuBackground); end)
 	elseif i == 5 then -- Close Menu
 		Text:SetText("Close Menu")
-		menu[i]:SetScript("OnMouseUp", function() MenuBG:Hide() AddOnBackground:Hide() end)
+		menu[i]:SetScript("OnMouseUp", function() MenuBG:Hide() TTMenuAddOnBackground:Hide() end)
 	end
 end
 
@@ -120,12 +146,13 @@ returnbutton:EnableMouse(true)
 returnbutton:HookScript("OnEnter", function(self) self:SetBackdropBorderColor(unpack(hovercolor)) end)
 returnbutton:HookScript("OnLeave", function(self) self:SetBackdropBorderColor(unpack(TukuiCF.media.bordercolor)) end)
 returnbutton:RegisterForClicks("AnyUp")
-returnbutton:SetFrameLevel(1)
+returnbutton:SetFrameLevel(defaultframelevel+1)
+returnbutton:SetFrameStrata("HIGH")
 Text = returnbutton:CreateFontString(nil, "LOW")
-Text:SetFont(font, fontsize)
+Text:SetFont(TukuiCF.togglemenu.font, TukuiCF.togglemenu.fontsize)
 Text:SetPoint("CENTER", returnbutton, 0, 0)
 Text:SetText("Return")
-returnbutton:SetScript("OnMouseUp", function() ToggleFrame(AddOnBackground); ToggleFrame(MenuBackground); end)
+returnbutton:SetScript("OnMouseUp", function() ToggleFrame(TTMenuAddOnBackground); ToggleFrame(TTMenuBackground); end)
 
 -- new stuff
 
@@ -135,9 +162,10 @@ expandbutton:EnableMouse(true)
 expandbutton:HookScript("OnEnter", function(self) self:SetBackdropBorderColor(unpack(hovercolor)) end)
 expandbutton:HookScript("OnLeave", function(self) self:SetBackdropBorderColor(unpack(TukuiCF.media.bordercolor)) end)
 expandbutton:RegisterForClicks("AnyUp")
-expandbutton:SetFrameLevel(1)
+expandbutton:SetFrameLevel(defaultframelevel+1)
+expandbutton:SetFrameStrata("HIGH")
 Text = expandbutton:CreateFontString(nil, "LOW")
-Text:SetFont(font, fontsize)
+Text:SetFont(TukuiCF.togglemenu.font, TukuiCF.togglemenu.fontsize)
 Text:SetPoint("CENTER", expandbutton, 0, 0)
 Text:SetText("v")
 expandbutton.txt = Text
@@ -219,7 +247,7 @@ local function addonFrameToggle(self, i)
 	end
 end
 
-local addonToggleOnly = defaultIsToggleOnly
+local addonToggleOnly = TukuiCF.togglemenu.defaultIsToggleOnly
 
 local function refreshAddOnMenu()
 	local lastMenuEntryID = 0
@@ -269,7 +297,8 @@ for i = 1,GetNumAddOns() do
 	TukuiDB.CreatePanel(addonmenuitems[i], buttonwidth, buttonheight, "TOP", returnbutton, "BOTTOM", 0, TukuiDB.Scale(-3))
 	addonmenuitems[i]:EnableMouse(true)
 	addonmenuitems[i]:RegisterForClicks("AnyUp")
-	addonmenuitems[i]:SetFrameLevel(1)
+	addonmenuitems[i]:SetFrameLevel(defaultframelevel+1)
+	addonmenuitems[i]:SetFrameStrata("HIGH")
 	addonmenuitems[i]:SetScript("OnMouseUp", function(self, btn)
 		if btn == "RightButton" then
 			addonEnableToggle(self, i)
@@ -297,13 +326,14 @@ for i = 1,GetNumAddOns() do
 		addonmenuitems[i]:SetBackdropColor(unpack(TukuiCF.media.bordercolor))
 	end
 	Text = addonmenuitems[i]:CreateFontString(nil, "LOW")
-	Text:SetFont(font, fontsize)
+	Text:SetFont(TukuiCF.togglemenu.font, TukuiCF.togglemenu.fontsize)
 	Text:SetPoint("CENTER", addonmenuitems[i], 0, 0)
 	Text:SetText(GetAddOnInfo(i))
 	if addonInfo[i].is_main then
 		local expandAddonButton = CreateFrame("Button", "AddonMenuExpand"..i, addonmenuitems[i])
 		TukuiDB.CreatePanel(expandAddonButton, buttonheight-TukuiDB.Scale(6), buttonheight-TukuiDB.Scale(6), "TOPLEFT", addonmenuitems[i], "TOPLEFT", TukuiDB.Scale(3), TukuiDB.Scale(-3))
-		expandAddonButton:SetFrameLevel(2)
+		expandAddonButton:SetFrameLevel(defaultframelevel+2)
+		expandAddonButton:SetFrameStrata("HIGH")
 		expandAddonButton:EnableMouse(true)
 		expandAddonButton:HookScript("OnEnter", function(self)
 			self:SetBackdropBorderColor(unpack(hovercolor))
@@ -321,7 +351,7 @@ for i = 1,GetNumAddOns() do
 			end)
 		expandAddonButton:RegisterForClicks("AnyUp")
 		Text = expandAddonButton:CreateFontString(nil, "LOW")
-		Text:SetFont(font, fontsize)
+		Text:SetFont(TukuiCF.togglemenu.font, TukuiCF.togglemenu.fontsize)
 		Text:SetPoint("CENTER", expandAddonButton, 0, 0)
 		Text:SetText("+")
 		expandAddonButton.txt = Text

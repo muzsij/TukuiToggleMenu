@@ -72,7 +72,11 @@ MenuBG:SetFrameStrata("HIGH")
 MenuBG:Hide()
  
 local AddonBG = CreateFrame("Frame", "TTMenuAddOnBackground", UIParent)
+if TukuiCF.togglemenu.positionnexttoMinimap == true then
+	TukuiDB.CreatePanel(AddonBG, buttonwidth + TukuiDB.Scale(6), 1, "TOPRIGHT", MenuBG, "TOPRIGHT", 0, 0)
+else
 TukuiDB.CreatePanel(AddonBG, buttonwidth + TukuiDB.Scale(6), 1, "TOP", MenuBG, "TOP", 0, 0)
+end
 AddonBG:SetFrameLevel(defaultframelevel+0)
 AddonBG:SetFrameStrata("HIGH")
 AddonBG:Hide()
@@ -149,7 +153,7 @@ for i = 1, 5 do
 end
 
 local returnbutton = CreateFrame("Button", "AddonMenuReturnButton", AddonBG)
-TukuiDB.CreatePanel(returnbutton, buttonwidth, buttonheight, "TOP", AddonBG, "TOP", 0, TukuiDB.Scale(-3))
+TukuiDB.CreatePanel(returnbutton, buttonwidth, buttonheight, "TOPLEFT", AddonBG, "TOPLEFT", TukuiDB.Scale(3), TukuiDB.Scale(-3))
 returnbutton:EnableMouse(true)
 returnbutton:HookScript("OnEnter", function(self) self:SetBackdropBorderColor(unpack(hovercolor)) end)
 returnbutton:HookScript("OnLeave", function(self) self:SetBackdropBorderColor(unpack(TukuiCF.media.bordercolor)) end)
@@ -258,8 +262,24 @@ end
 local addonToggleOnly = TukuiCF.togglemenu.defaultIsToggleOnly
 
 local function refreshAddOnMenu()
-	local lastMenuEntryID = 0
 	local menusize = 1
+	for i = 1,GetNumAddOns() do
+		local name, _,_, _, _, _, _ = GetAddOnInfo(i)
+		if (addonInfo[i].is_main or (addonInfo[i].parent == i) or not addonInfo[addonInfo[i].parent].collapsed) then
+			if (not addonToggleOnly or (addons[name] and IsAddOnLoaded(i))) then
+				menusize = menusize + 1
+			end
+		end
+	end
+	if TukuiCF.togglemenu.maxMenuEntries and TukuiCF.togglemenu.maxMenuEntries > 0 then
+		menuwidth  = ceil(menusize/TukuiCF.togglemenu.maxMenuEntries)
+	else
+		menuwidth  = 1
+	end
+	menuheigth = ceil(menusize/menuwidth)
+
+	local lastMenuEntryID = 0
+	menusize = 1
 	for i = 1,GetNumAddOns() do
 		local name, _,_, _, _, _, _ = GetAddOnInfo(i)
 		addonmenuitems[i]:Hide()		
@@ -268,6 +288,8 @@ local function refreshAddOnMenu()
 				addonmenuitems[i]:ClearAllPoints()
 				if (menusize == 1) then
 					addonmenuitems[i]:SetPoint( "TOP", returnbutton, "BOTTOM", 0, TukuiDB.Scale(-3))
+				elseif menusize % menuheigth == 0 then
+					addonmenuitems[i]:SetPoint( "LEFT", addonmenuitems[lastMenuEntryID], "RIGHT", TukuiDB.Scale(3), (menuheigth - 1) * (buttonheight + TukuiDB.Scale(3)))
 				else
 					addonmenuitems[i]:SetPoint( "TOP", addonmenuitems[lastMenuEntryID], "BOTTOM", 0, TukuiDB.Scale(-3))
 				end
@@ -284,7 +306,9 @@ local function refreshAddOnMenu()
 			end
 		end
 	end
-	AddonBG:SetHeight(((menusize) * buttonheight) + buttonheight/2 + ((menusize + 2) * 3))
+	AddonBG:SetHeight((menuheigth * buttonheight) + buttonheight/2 + ((menuheigth + 2) * TukuiDB.Scale(3)))
+	AddonBG:SetWidth((menuwidth * buttonwidth) + ((menuwidth + 1) * TukuiDB.Scale(3)))
+	expandbutton:SetWidth((menuwidth * buttonwidth) + ((menuwidth-1) * TukuiDB.Scale(3)))
 end
 
 expandbutton:SetScript("OnMouseUp", function(self) 

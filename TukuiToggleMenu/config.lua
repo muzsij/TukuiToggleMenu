@@ -12,4 +12,5 @@ TukuiCF["togglemenu"] = {
 	["useTukuiCubeRight"] = true,				-- Toggle the menu if click on TukuiCubeRight
 	["useDataText"] = 0,						-- Place the toggle menu on the panel (0 - turn off)
 	["DataTextTitle"] = 'Menu',					-- Use this text on panel
+	["maxMenuEntries"] = 30,                    -- Maximum number of menu entries per column (0 - unlimited number)
 }

@@ -59,6 +59,18 @@ local addons = {
 	["ScrollMaster"] = function()
 		LibStub("AceAddon-3.0"):GetAddon("ScrollMaster").GUI:OpenFrame(1)
 	end,
+
+	["PugLax"] = function()
+		if (PugLax_Header) then
+			if (PugLax_Header:IsVisible()) then
+				PugLax_Header:Hide()
+			else
+				PugLax_Header:Show()
+				PugLax:RebuildGUI()
+			end
+		end
+	end,
+	
 }
 
 local MenuBG = CreateFrame("Frame", "TTMenuBackground", UIParent)

@@ -1,93 +1,54 @@
+local T, C, L = unpack(Tukui) -- Import: T - functions, constants, variables; C - config; L - locales
+
 -- By Foof & Hydra at Tukui.org
 -- modified by Gorlasch
 -- modified by HyPeRnIcS
 
-local buttonwidth = TukuiDB.Scale(TukuiCF.togglemenu.buttonwidth)
-local buttonheight = TukuiDB.Scale(TukuiCF.togglemenu.buttonheight)
+if C.togglemenu.positionbelowMinimap == true then
+	C.togglemenu.buttonwidth = TukuiMinimap:GetWidth() - 2 * C.togglemenu.buttonspacing
+end
+
+local function buttonwidth(num)
+	return num * C.togglemenu.buttonwidth
+end
+local function buttonheight(num)
+	return num * C.togglemenu.buttonheight
+end
+local function buttonspacing(num)
+	return num * C.togglemenu.buttonspacing
+end
+local function borderwidth(num)
+	return buttonwidth(num) + buttonspacing(num+1)
+end
+local function borderheight(num)
+	return buttonheight(num) + buttonspacing(num+1)
+end
 local defaultframelevel = 0
 
-local addons = {
-	["Recount"] = function()
-		ToggleFrame(Recount.MainWindow)
-		Recount.RefreshMainWindow()
-	end,
-	
-	["Skada"] = function()
-		Skada:ToggleWindow()
-	end,
-	
-	["AtlasLoot"] = function()
-		ToggleFrame(AtlasLootDefaultFrame)
-	end,
-	
-	["Omen"] = function()
-		ToggleFrame(Omen.Anchor)
-	end,
-	
-	["DXE"] = function()
-		_G.DXE:ToggleConfig()
-	end,
-	
-	["DBM-Core"] = function()
-		DBM:LoadGUI()
-	end,
-	
-	["TinyDPS"] = function()
-		ToggleFrame(tdpsFrame)
-	end,
-	
-	["Tukui_ConfigUI"] = function()
-		if not TukuiConfigUI or not TukuiConfigUI:IsShown() then
-			CreateTukuiConfigUI()
-		else
-			TukuiConfigUI:Hide()
-		end
-	end,
-
-	["Panda"] = function()
-		ToggleFrame(PandaPanel)
-	end,
-
-	["PallyPower"] = function()
-		ToggleFrame(PallyPowerFrame)
-	end,
-
-	["ACP"] = function()
-		ToggleFrame(ACP_AddonList)
-	end,
-
-	["ScrollMaster"] = function()
-		LibStub("AceAddon-3.0"):GetAddon("ScrollMaster").GUI:OpenFrame(1)
-	end,
-
-	["PugLax"] = function()
-		if (PugLax_Header) then
-			if (PugLax_Header:IsVisible()) then
-				PugLax_Header:Hide()
-			else
-				PugLax_Header:Show()
-				PugLax:RebuildGUI()
-			end
-		end
-	end,
-	
-}
-
 local MenuBG = CreateFrame("Frame", "TTMenuBackground", UIParent)
-if TukuiCF.togglemenu.positionnexttoMinimap == true then
-	TukuiDB.CreatePanel(MenuBG, buttonwidth + TukuiDB.Scale(6), buttonheight * 5 + TukuiDB.Scale(18), "TOPRIGHT", TukuiMinimap, "TOPLEFT", TukuiDB.Scale(-3), 0)
+if C.togglemenu.positionnexttoMinimap == true then
+	MenuBG:CreatePanel("Default", borderwidth(1), borderheight(5), "TOPRIGHT", TukuiMinimap, "TOPLEFT", buttonspacing(-1), 0)
+	if C.togglemenu.positionbelowMinimap == true then
+		if TukuiMinimapStatsRight then
+			MenuBG:CreatePanel("Default", borderwidth(1), borderheight(5), "TOPRIGHT", TukuiMinimapStatsRight, "BOTTOMRIGHT", 0, buttonspacing(-1))
+		else
+			MenuBG:CreatePanel("Default", borderwidth(1), borderheight(5), "TOPRIGHT", TukuiMinimap, "BOTTOMRIGHT", 0, buttonspacing(-1))
+		end
+	end
 else
-	TukuiDB.CreatePanel(MenuBG, buttonwidth + TukuiDB.Scale(6), buttonheight * 5 + TukuiDB.Scale(18), "TOP", UIParent, "TOP", 0, TukuiDB.Scale(-15))
+	MenuBG:CreatePanel("Default", borderwidth(1), borderheight(5), "TOP", UIParent, "TOP", 0, buttonspacing(-5))
 end
 MenuBG:SetFrameLevel(defaultframelevel+0)
 MenuBG:SetFrameStrata("HIGH")
-MenuBG:Hide()
+if not C.togglemenu.showByDefault then
+	MenuBG:Hide()
+end
  
 local AddonBG = CreateFrame("Frame", "TTMenuAddOnBackground", UIParent)
 if TukuiCF.togglemenu.positionnexttoMinimap == true then
-	TukuiDB.CreatePanel(AddonBG, buttonwidth + TukuiDB.Scale(6), 1, "TOPRIGHT", MenuBG, "TOPRIGHT", 0, 0)
+	AddonBG:CreatePanel("Default", borderwidth(1), 1, "TOPRIGHT", MenuBG, "TOPRIGHT", 0, 0)
 else
-TukuiDB.CreatePanel(AddonBG, buttonwidth + TukuiDB.Scale(6), 1, "TOP", MenuBG, "TOP", 0, 0)
+	AddonBG:CreatePanel("Default", borderwidth(1), 1, "TOP", MenuBG, "TOP", 0, 0)
 end
 AddonBG:SetFrameLevel(defaultframelevel+0)
 AddonBG:SetFrameStrata("HIGH")
@@ -98,31 +59,35 @@ function ToggleMenu_Toggle()
 	if TTMenuAddOnBackground:IsShown() then TTMenuAddOnBackground:Hide() end
 end
 
+-- Add slash command
+SLASH_TUKUITOGGLEMENU1 = "/ttm"
+SlashCmdList.TUKUITOGGLEMENU = ToggleMenu_Toggle
+
 -- Integrate the menu into TukuiRightCube
-if TukuiCubeRight and TukuiCF.togglemenu.useTukuiCubeRight == true then
+if TukuiCubeRight and C.togglemenu.useTukuiCubeRight == true then
 	local ToggleCube = CreateFrame("Frame", "TukuiToggleCube", UIParent)
-	TukuiDB.CreatePanel(ToggleCube, TukuiCubeRight:GetWidth(), TukuiCubeRight:GetHeight(), "CENTER", TukuiCubeRight, "CENTER", 0, 0)
+	ToggleCube:CreatePanel("Default", TukuiCubeRight:GetWidth(), TukuiCubeRight:GetHeight(), "CENTER", TukuiCubeRight, "CENTER", 0, 0)
 	ToggleCube:SetFrameLevel(TukuiCubeRight:GetFrameLevel() + 1)
 	ToggleCube:EnableMouse(true)
 	ToggleCube:SetScript("OnMouseDown", function() ToggleMenu_Toggle() end)
 end
 
 -- Integrate the menu into the panel
-if TukuiCF.togglemenu.useDataText and TukuiCF.togglemenu.useDataText > 0 then
+if C.togglemenu.useDataText and C.togglemenu.useDataText > 0 then
 	local DataText = CreateFrame("Frame")
 	DataText:EnableMouse(true)
 	DataText:SetFrameStrata("BACKGROUND")
 	DataText:SetFrameLevel(3)
 	local Text  = TukuiInfoLeft:CreateFontString(nil, "OVERLAY")
-	Text:SetFont(TukuiCF.media.font, TukuiCF["datatext"].fontsize)
-	TukuiDB.PP(TukuiCF.togglemenu.useDataText, Text)
-	Text:SetText(TukuiCF.togglemenu.DataTextTitle)
+	Text:SetFont(C.media.font, C["datatext"].fontsize)
+	TukuiDB.PP(C.togglemenu.useDataText, Text)
+	Text:SetText(C.togglemenu.DataTextTitle)
 	DataText:SetAllPoints(Text)
 	DataText:SetScript("OnMouseDown", function() ToggleMenu_Toggle() end)
 end
 
 -- color sh*t
-if TukuiCF.togglemenu.classcolor == true then
+if C.togglemenu.classcolor == true then
 	local classcolor = RAID_CLASS_COLORS[TukuiDB.myclass]
 	hovercolor = {classcolor.r,classcolor.g,classcolor.b,1}
 end
@@ -130,13 +95,13 @@ end
 local menu = CreateFrame("Button", "Menu", MenuBG) -- Main buttons
 for i = 1, 5 do
 	menu[i] = CreateFrame("Button", "Menu"..i, MenuBG)
-	TukuiDB.CreatePanel(menu[i], buttonwidth, buttonheight, "BOTTOM", MenuBG, "BOTTOM", 0, TukuiDB.Scale(3))
+	menu[i]:CreatePanel("Default", buttonwidth(1), buttonheight(1), "BOTTOM", MenuBG, "BOTTOM", 0, buttonspacing(1))
 	menu[i]:SetFrameLevel(defaultframelevel+1)
 	menu[i]:SetFrameStrata("HIGH")
 	if i == 1 then
-		menu[i]:SetPoint("BOTTOM", MenuBG, "BOTTOM", 0, TukuiDB.Scale(3))
+		menu[i]:SetPoint("BOTTOM", MenuBG, "BOTTOM", 0, buttonspacing(1))
 	else
-		menu[i]:SetPoint("BOTTOM", menu[i-1], "TOP", 0, TukuiDB.Scale(3))
+		menu[i]:SetPoint("BOTTOM", menu[i-1], "TOP", 0, buttonspacing(1))
 	end
 	menu[i]:EnableMouse(true)
 	menu[i]:HookScript("OnEnter", function(self) self:SetBackdropBorderColor(unpack(hovercolor)) end)
@@ -165,7 +130,7 @@ for i = 1, 5 do
 end
 
 local returnbutton = CreateFrame("Button", "AddonMenuReturnButton", AddonBG)
-TukuiDB.CreatePanel(returnbutton, buttonwidth, buttonheight, "TOPLEFT", AddonBG, "TOPLEFT", TukuiDB.Scale(3), TukuiDB.Scale(-3))
+returnbutton:CreatePanel("Default", buttonwidth(1), buttonheight(1), "TOPLEFT", AddonBG, "TOPLEFT", buttonspacing(1), buttonspacing(-1))
 returnbutton:EnableMouse(true)
 returnbutton:HookScript("OnEnter", function(self) self:SetBackdropBorderColor(unpack(hovercolor)) end)
 returnbutton:HookScript("OnLeave", function(self) self:SetBackdropBorderColor(unpack(TukuiCF.media.bordercolor)) end)
@@ -178,10 +143,8 @@ Text:SetPoint("CENTER", returnbutton, 0, 0)
 Text:SetText("Return")
 returnbutton:SetScript("OnMouseUp", function() ToggleFrame(TTMenuAddOnBackground); ToggleFrame(TTMenuBackground); end)
 
--- new stuff
-
 local expandbutton = CreateFrame("Button", "AddonMenuExpandButton", AddonBG)
-TukuiDB.CreatePanel(expandbutton, buttonwidth, buttonheight/2, "BOTTOM", AddonBG, "BOTTOM", 0, TukuiDB.Scale(3))
+expandbutton:CreatePanel("Default", buttonwidth(1), buttonheight(1)/2, "BOTTOM", AddonBG, "BOTTOM", 0, buttonspacing(1))
 expandbutton:EnableMouse(true)
 expandbutton:HookScript("OnEnter", function(self) self:SetBackdropBorderColor(unpack(hovercolor)) end)
 expandbutton:HookScript("OnLeave", function(self) self:SetBackdropBorderColor(unpack(TukuiCF.media.bordercolor)) end)
@@ -264,31 +227,31 @@ end
 
 local function addonFrameToggle(self, i)
 	local name, _,_, _, _, _, _ = GetAddOnInfo(i)
-	if addons[name] then
+	if C.toggleaddons[name] then
 		if IsAddOnLoaded(i) then
-			addons[name]()
+			C.toggleaddons[name]()
 		end
 	end
 end
 
-local addonToggleOnly = TukuiCF.togglemenu.defaultIsToggleOnly
+local addonToggleOnly = C.togglemenu.defaultIsToggleOnly
 
 local function refreshAddOnMenu()
 	local menusize = 1
 	for i = 1,GetNumAddOns() do
-		local name, _,_, _, _, _, _ = GetAddOnInfo(i)
+		local name, _, _, _, _, _, _ = GetAddOnInfo(i)
 		if (addonInfo[i].is_main or (addonInfo[i].parent == i) or not addonInfo[addonInfo[i].parent].collapsed) then
-			if (not addonToggleOnly or (addons[name] and IsAddOnLoaded(i))) then
+			if (not addonToggleOnly or (C.toggleaddons[name] and IsAddOnLoaded(i))) then
 				menusize = menusize + 1
 			end
 		end
 	end
-	if TukuiCF.togglemenu.maxMenuEntries and TukuiCF.togglemenu.maxMenuEntries > 0 then
-		menuwidth  = ceil(menusize/TukuiCF.togglemenu.maxMenuEntries)
+	if C.togglemenu.maxMenuEntries and C.togglemenu.maxMenuEntries > 0 then
+		menuwidth  = ceil(menusize/C.togglemenu.maxMenuEntries)
 	else
 		menuwidth  = 1
 	end
-	menuheigth = ceil(menusize/menuwidth)
+	menuheight = ceil(menusize/menuwidth)
 
 	local lastMenuEntryID = 0
 	menusize = 1
@@ -296,14 +259,14 @@ local function refreshAddOnMenu()
 		local name, _,_, _, _, _, _ = GetAddOnInfo(i)
 		addonmenuitems[i]:Hide()		
 		if (addonInfo[i].is_main or (addonInfo[i].parent == i) or not addonInfo[addonInfo[i].parent].collapsed) then
-			if (not addonToggleOnly or (addons[name] and IsAddOnLoaded(i))) then
+			if (not addonToggleOnly or (C.toggleaddons[name] and IsAddOnLoaded(i))) then
 				addonmenuitems[i]:ClearAllPoints()
 				if (menusize == 1) then
-					addonmenuitems[i]:SetPoint( "TOP", returnbutton, "BOTTOM", 0, TukuiDB.Scale(-3))
-				elseif menusize % menuheigth == 0 then
-					addonmenuitems[i]:SetPoint( "LEFT", addonmenuitems[lastMenuEntryID], "RIGHT", TukuiDB.Scale(3), (menuheigth - 1) * (buttonheight + TukuiDB.Scale(3)))
+					addonmenuitems[i]:SetPoint( "TOP", returnbutton, "BOTTOM", 0, buttonspacing(-1))
+				elseif menusize % menuheight == 0 then
+					addonmenuitems[i]:SetPoint( "LEFT", addonmenuitems[lastMenuEntryID], "RIGHT", buttonspacing(1), borderheight(menuheight - 1) - buttonspacing(1))
 				else
-					addonmenuitems[i]:SetPoint( "TOP", addonmenuitems[lastMenuEntryID], "BOTTOM", 0, TukuiDB.Scale(-3))
+					addonmenuitems[i]:SetPoint( "TOP", addonmenuitems[lastMenuEntryID], "BOTTOM", 0, buttonspacing(-1))
 				end
 				addonmenuitems[i]:Show()
 				lastMenuEntryID = i
@@ -318,9 +281,9 @@ local function refreshAddOnMenu()
 			end
 		end
 	end
-	AddonBG:SetHeight((menuheigth * buttonheight) + buttonheight/2 + ((menuheigth + 2) * TukuiDB.Scale(3)))
-	AddonBG:SetWidth((menuwidth * buttonwidth) + ((menuwidth + 1) * TukuiDB.Scale(3)))
-	expandbutton:SetWidth((menuwidth * buttonwidth) + ((menuwidth-1) * TukuiDB.Scale(3)))
+	AddonBG:SetHeight(borderheight(menuheight+1) - buttonheight(1)/2)
+	AddonBG:SetWidth(borderwidth(menuwidth))
+	expandbutton:SetWidth(buttonwidth(menuwidth) + buttonspacing(menuwidth-1))
 end
 
 expandbutton:SetScript("OnMouseUp", function(self) 
@@ -330,7 +293,7 @@ expandbutton:SetScript("OnMouseUp", function(self)
 		self.txt:SetPoint("CENTER", self, 0, 0)
 	else
 		self.txt:SetText("^")
-		self.txt:SetPoint("CENTER", self, 0, TukuiDB.Scale(-2))
+		self.txt:SetPoint("CENTER", self, 0, -2)
 	end
 	refreshAddOnMenu()
 end)
@@ -338,7 +301,7 @@ end)
 for i = 1,GetNumAddOns() do
 	local name, _,_, _, _, _, _ = GetAddOnInfo(i)
 	addonmenuitems[i] = CreateFrame("Button", "AddonMenu"..i, AddonBG)
-	TukuiDB.CreatePanel(addonmenuitems[i], buttonwidth, buttonheight, "TOP", returnbutton, "BOTTOM", 0, TukuiDB.Scale(-3))
+	addonmenuitems[i]:CreatePanel("Default", buttonwidth(1), buttonheight(1), "TOP", returnbutton, "BOTTOM", 0, buttonspacing(-1))
 	addonmenuitems[i]:EnableMouse(true)
 	addonmenuitems[i]:RegisterForClicks("AnyUp")
 	addonmenuitems[i]:SetFrameLevel(defaultframelevel+1)
@@ -354,7 +317,7 @@ for i = 1,GetNumAddOns() do
 		GameTooltip:SetOwner(self, 'ANCHOR_NONE', 0, 0)
 		GameTooltip:AddLine("Addon "..name)
 		GameTooltip:AddLine("Rightclick to enable or disable (needs UI reload)")			
-		if addons[name] then
+		if C.toggleaddons[name] then
 			if IsAddOnLoaded(i) then
 				GameTooltip:AddLine("Leftclick to toggle addon window")
 			end
@@ -375,7 +338,7 @@ for i = 1,GetNumAddOns() do
 	Text:SetText(select(2,GetAddOnInfo(i)))
 	if addonInfo[i].is_main then
 		local expandAddonButton = CreateFrame("Button", "AddonMenuExpand"..i, addonmenuitems[i])
-		TukuiDB.CreatePanel(expandAddonButton, buttonheight-TukuiDB.Scale(6), buttonheight-TukuiDB.Scale(6), "TOPLEFT", addonmenuitems[i], "TOPLEFT", TukuiDB.Scale(3), TukuiDB.Scale(-3))
+		expandAddonButton:CreatePanel("Default", buttonheight(1)-buttonspacing(2), buttonheight(1)-buttonspacing(2), "TOPLEFT", addonmenuitems[i], "TOPLEFT", buttonspacing(1), buttonspacing(-1))
 		expandAddonButton:SetFrameLevel(defaultframelevel+2)
 		expandAddonButton:SetFrameStrata("HIGH")
 		expandAddonButton:EnableMouse(true)
